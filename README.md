@@ -1,5 +1,9 @@
 # Give Me Binary
 
+- [About the Game](#about-the-game)  
+- [Setup](#setup)  
+- [How to Play](#how-to-play)  
+
 ## About the Game
 Give Me Binary is a game designed to challenge player's understanding of binary numbers.  
 The game generates a random decimal number between 1 and 15, and the player’s goal is to represent that number using binary, by toggling a set of buttons corresponding to each bit.  
