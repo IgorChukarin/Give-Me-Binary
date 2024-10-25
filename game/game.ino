@@ -9,41 +9,38 @@
 
 LiquidCrystal_I2C lcd(0x27, 16, 4);
 
-const int REDLED = 13;
-bool redLedState = LOW;
-long previousRedLedBlinkTime = 0;
-
 const int BUTTONS[] = {2, 3, 4, 5};
 const int LEDS[] = {8, 9, 10, 11};
-bool ledStates[] = {LOW, LOW, LOW, LOW};
-long previousButtonPressTime[4];
+const int REDLED = 13;
 
-int currentPotValue = 1;
+int highScore = 0;
+int currentScore = 0;
 int difficulty = 0;
+int timeLimit = 15;
 
+bool ledStates[] = {LOW, LOW, LOW, LOW};
+bool redLedState = LOW;
 bool isIntroDisplayed = false;
 bool isDifficultySelected = false;
 bool isGameStarted = false;
 bool isGameOver = false;
-
 bool shouldDisplayNumber = true;
-int targetNumber = 0;
 
+unsigned long previousButtonPressTime[4];
+unsigned long previousRedLedBlinkTime = 0;
+unsigned long lastActivityTime;
 unsigned long timeRoundStart = 0;
-int deltaT = 0;
+
+int targetNumber = 0;
+int currentPotValue = 1;
 int currentDelta = 0;
-int time = 15;
-int highScore = 0;  
-int currentScore = 0; 
 
 int F = 0;
-long lastActivityTime;
 
 void wakeUp(){}
 
 void setup() {
   Serial.begin(9600);
-  
   lcd.init();
   lcd.backlight();
   randomSeed(analogRead(0));
@@ -51,28 +48,19 @@ void setup() {
     pinMode(BUTTONS[i], INPUT);
     pinMode(LEDS[i], OUTPUT);
     previousButtonPressTime[i] = 0;
-    enableInterrupt (BUTTONS[i], wakeUp, RISING);
+    enableInterrupt(BUTTONS[i], wakeUp, RISING);
   }
   pinMode(REDLED, OUTPUT);
-  enableInterrupt(digitalPinToInterrupt(2), wakeUp, RISING);
   lastActivityTime = millis();
 }
 
 void loop() {
-  if (!isIntroDisplayed) {
-    displayIntro();
-  } else if (!isDifficultySelected) {
-    checkInactivity();
-    selectDifficulty();
-  } else if (!isGameStarted) {
-    startGame();
-  } else if (!isGameOver) {
-    playGame();
-  } else {
-    finishGame();
-  }
+  if (!isIntroDisplayed) displayIntro();
+  else if (!isDifficultySelected) selectDifficulty();
+  else if (!isGameStarted) startGame();
+  else if (!isGameOver) playGame();
+  else finishGame();
 }
-
 
 void displayIntro() {
   lcd.clear();
@@ -86,37 +74,10 @@ void displayIntro() {
   isIntroDisplayed = true;
 }
 
-
-void checkInactivity() {
-  if (millis() - lastActivityTime >= WAKE_UP_TIME) {
-    goToSleepMode();
-  }
-}
-
-
-void goToSleepMode() {
-  lcd.clear();
-  lcd.print("Sleeping...");
-  Serial.flush();
-  digitalWrite(REDLED, LOW);
-  delay(1000);
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-  sleep_enable();
-  sleep_mode();
-
-  Serial.println("WAKE UP");
-  sleep_disable();
-  lastActivityTime = millis();
-  displayIntro();
-  delay(1000);
-}
-
-
 void selectDifficulty() {
-  blinkRedLed();
-
+  if (millis() - lastActivityTime >= WAKE_UP_TIME) goToSleepMode();
   int newPotValue = analogRead(A1);
-  if(currentPotValue != newPotValue){
+  if(newPotValue != currentPotValue){
     currentPotValue = newPotValue;
     if(currentPotValue >= 0 && currentPotValue <= 256 && difficulty != 1){
       lastActivityTime = millis();
@@ -158,18 +119,31 @@ void selectDifficulty() {
     digitalWrite(REDLED, redLedState);
     lastActivityTime = millis();
   }
+  blinkRedLed();
 }
 
+void goToSleepMode() {
+  lcd.clear();
+  lcd.print("Sleeping...");
+  Serial.flush();
+  digitalWrite(REDLED, LOW);
+  delay(1000);
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  sleep_enable();
+  sleep_mode();
+  sleep_disable();
+  lastActivityTime = millis();
+  displayIntro();
+  delay(1000);
+}
 
 void blinkRedLed() {
-  long currentRedLedTime = millis();
-  if (currentRedLedTime - previousRedLedBlinkTime >= LED_BLINK_INTERVAL) {
-    previousRedLedBlinkTime = currentRedLedTime;
+  if (millis() - previousRedLedBlinkTime >= LED_BLINK_INTERVAL) {
     redLedState = !redLedState;
     digitalWrite(REDLED, redLedState);
+    previousRedLedBlinkTime = millis();
   }
 }
-
 
 void startGame() {
   isGameStarted = true;
@@ -178,34 +152,42 @@ void startGame() {
   delay(1000);
 }
 
-
 void playGame() {
   if (shouldDisplayNumber) {
     targetNumber = random(1, 16);
     lcd.clear();
-    lcd.print(targetNumber, DEC);
+    lcd.print(targetNumber);
     shouldDisplayNumber = false;
     timeRoundStart = millis();
-  } else {
+  } 
+  else {
     no_more_time();
     handleButtonPresses();
     if (targetNumber == convertButtonsStatesToDecimal()) {
       currentScore++;
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Correct!");
-      lcd.setCursor(0, 1);
-      lcd.print("Score: ");
-      lcd.print(currentScore);
-      delay(1000);
-      shouldDisplayNumber = true;
-      turnOffAllLeds();
-      time = time - (time*F/100);
+      displayScore();
+      resetRound();
+      
+      timeLimit = timeLimit - (timeLimit * F / 100);
       currentDelta = 0;
     }
   }
 }
 
+void displayScore() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Correct!");
+  lcd.setCursor(0, 1);
+  lcd.print("Score: ");
+  lcd.print(currentScore);
+  delay(1000);
+}
+
+void resetRound() {
+  shouldDisplayNumber = true;
+  turnOffAllLeds();
+}
 
 void handleButtonPresses() {
   for (int i = 0; i < 4; i++) {
@@ -219,7 +201,6 @@ void handleButtonPresses() {
   }
 }
 
-
 int convertButtonsStatesToDecimal() {
   int decimal = 0;
   for (int i = 0; i < 4; i++) {
@@ -228,7 +209,6 @@ int convertButtonsStatesToDecimal() {
   return decimal;
 }
 
-
 void turnOffAllLeds() {
   for (int i = 0; i < 4; i++) {
     ledStates[i] = LOW;
@@ -236,8 +216,8 @@ void turnOffAllLeds() {
   }
 }
 
-
 void finishGame() {
+  turnOffAllLeds();
   lcd.clear();
   digitalWrite(REDLED, HIGH);
   delay(1000);
@@ -246,45 +226,38 @@ void finishGame() {
   lcd.setCursor(0, 1);
   lcd.print("Final Score: ");
   lcd.print(currentScore);
-  if (currentScore > highScore) {
-    highScore = currentScore;  
-  }
+  if (currentScore > highScore) highScore = currentScore;
   delay(10000);
   resetGame();
 }
 
-
 void resetGame() {
-  lcd.clear();
   isIntroDisplayed = false;
   isDifficultySelected = false;
   isGameStarted = false;
   isGameOver = false;
-  timeRoundStart = 0;
-  deltaT = 0;
-  currentDelta = 0;
   currentScore = 0;
   difficulty = 0;
   currentPotValue = 0;
   shouldDisplayNumber = true;
-  time =15;
+  timeLimit = 15;
   turnOffAllLeds();
   lastActivityTime = millis();
+  
+  timeRoundStart = 0;
+  currentDelta = 0;
 }
 
-
 void no_more_time(){
-int deltaT = (millis() - timeRoundStart)/1000 ;
- if(currentDelta != deltaT){
+int timeElapsed = (millis() - timeRoundStart) / 1000 ;
+ if(currentDelta != timeElapsed){
     lcd.setCursor(8,0);
     lcd.print("Time:");
     lcd.setCursor(13,0);
     lcd.print("  ");
     lcd.setCursor(13,0);
-    lcd.print(time - currentDelta);
+    lcd.print(timeLimit - currentDelta);
   }
-  currentDelta = deltaT;
-  if(currentDelta > time){
-    finishGame();
-  }
+  currentDelta = timeElapsed;
+  if(currentDelta > timeLimit) isGameOver = true;
 }
