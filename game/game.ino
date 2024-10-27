@@ -83,46 +83,6 @@ void checkForIdleTimeout() {
   if (millis() - lastActivityTime >= WAKE_UP_TIME) goToSleepMode();
 }
 
-void updateDifficultyLevel() {
-  int newPotValue = analogRead(A1);
-  if(newPotValue != currentPotValue){
-    currentPotValue = newPotValue;
-    lastActivityTime = millis();
-    lcd.setCursor(0,2);
-
-    if(currentPotValue <= 256 && difficultyFactor != 1){
-      lcd.print("          ");
-      lcd.setCursor(0,2);
-      lcd.print(" :) EASY");
-      difficultyFactor = 1;
-    } else if(currentPotValue > 256 && currentPotValue <= 512 && difficultyFactor != 2){
-      lcd.print("          ");
-      lcd.setCursor(0,2);
-      lcd.print(" :| MEDIUM");
-      difficultyFactor = 2;
-    } else if(currentPotValue > 512 && currentPotValue <= 768 && difficultyFactor != 3){
-      lcd.print("          ");
-      lcd.setCursor(0,2);
-      lcd.print(">:) HARD");
-      difficultyFactor = 3;
-    }else if(currentPotValue > 768 && difficultyFactor != 4){
-      lcd.print("          ");
-      lcd.setCursor(0,2);
-      lcd.print(">:D EXPERT");
-      difficultyFactor = 4;
-    }
-  }
-}
-
-void checkButtonPressForSelection() {
-    if (digitalRead(BUTTONS[3])) {
-    isDifficultySelected = true;
-    redLedState = LOW;
-    digitalWrite(REDLED, redLedState);
-    lastActivityTime = millis();
-  }
-}
-
 void goToSleepMode() {
   lcd.clear();
   lcd.print("Sleeping...");
@@ -136,6 +96,48 @@ void goToSleepMode() {
   lastActivityTime = millis();
   displayIntro();
   delay(1000);
+}
+
+void updateDifficultyLevel() {
+  int newPotValue = analogRead(A1);
+  if(newPotValue != currentPotValue){
+    currentPotValue = newPotValue;
+    lcd.setCursor(0,2);
+    if(currentPotValue <= 256 && difficultyFactor != 1){
+      lcd.print("          ");
+      lcd.setCursor(0,2);
+      lcd.print(" :) EASY");
+      difficultyFactor = 1;
+      lastActivityTime = millis();
+    } else if(currentPotValue > 256 && currentPotValue <= 512 && difficultyFactor != 2){
+      lcd.print("          ");
+      lcd.setCursor(0,2);
+      lcd.print(" :| MEDIUM");
+      difficultyFactor = 2;
+      lastActivityTime = millis();
+    } else if(currentPotValue > 512 && currentPotValue <= 768 && difficultyFactor != 3){
+      lcd.print("          ");
+      lcd.setCursor(0,2);
+      lcd.print(">:) HARD");
+      difficultyFactor = 3;
+      lastActivityTime = millis();
+    }else if(currentPotValue > 768 && difficultyFactor != 4){
+      lcd.print("          ");
+      lcd.setCursor(0,2);
+      lcd.print(">:D EXPERT");
+      difficultyFactor = 4;
+      lastActivityTime = millis();
+    }
+  }
+}
+
+void checkButtonPressForSelection() {
+    if (digitalRead(BUTTONS[3])) {
+    isDifficultySelected = true;
+    redLedState = LOW;
+    digitalWrite(REDLED, redLedState);
+    lastActivityTime = millis();
+  }
 }
 
 void blinkRedLed() {
@@ -168,7 +170,6 @@ void playGame() {
       currentScore++;
       displayScore();
       resetRound();
-      
       timeLimit = timeLimit - difficultyFactor;
       if (timeLimit < 1) timeLimit = 1;
       currentDelta = 0;
@@ -176,19 +177,18 @@ void playGame() {
   }
 }
 
-void displayScore() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Correct!");
-  lcd.setCursor(0, 1);
-  lcd.print("Score: ");
-  lcd.print(currentScore);
-  delay(1000);
-}
-
-void resetRound() {
-  shouldDisplayNumber = true;
-  turnOffAllLeds();
+void handleRoundTimer(){
+int timeElapsed = (millis() - timeRoundStart) / 1000 ;
+ if(currentDelta != timeElapsed){
+    lcd.setCursor(8,0);
+    lcd.print("Time:");
+    lcd.setCursor(13,0);
+    lcd.print("  ");
+    lcd.setCursor(13,0);
+    lcd.print(timeLimit - timeElapsed + 1);
+  }
+  currentDelta = timeElapsed;
+  if(currentDelta > timeLimit) isGameOver = true;
 }
 
 void handleButtonPresses() {
@@ -209,6 +209,21 @@ int convertButtonsStatesToDecimal() {
     decimal += ledStates[i] << (i);
   }
   return decimal;
+}
+
+void displayScore() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Correct!");
+  lcd.setCursor(0, 1);
+  lcd.print("Score: ");
+  lcd.print(currentScore);
+  delay(1000);
+}
+
+void resetRound() {
+  shouldDisplayNumber = true;
+  turnOffAllLeds();
 }
 
 void turnOffAllLeds() {
@@ -245,21 +260,6 @@ void resetGame() {
   timeLimit = 15;
   turnOffAllLeds();
   lastActivityTime = millis();
-  
   timeRoundStart = 0;
   currentDelta = 0;
-}
-
-void handleRoundTimer(){
-int timeElapsed = (millis() - timeRoundStart) / 1000 ;
- if(currentDelta != timeElapsed){
-    lcd.setCursor(8,0);
-    lcd.print("Time:");
-    lcd.setCursor(13,0);
-    lcd.print("  ");
-    lcd.setCursor(13,0);
-    lcd.print(timeLimit - timeElapsed + 1);
-  }
-  currentDelta = timeElapsed;
-  if(currentDelta > timeLimit) isGameOver = true;
 }
