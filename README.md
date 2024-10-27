@@ -6,8 +6,8 @@
 
 ## About the Game
 Give Me Binary is a game designed to challenge player's understanding of binary numbers.  
-The game generates a random decimal number between 1 and 15, and the player’s goal is to represent that number using binary, by toggling a set of buttons corresponding to each bit.  
-The player’s success is visually indicated by LEDs, which light up when the corresponding bit is set to 1.
+The game displays a random decimal number between 1 and 15, and the player’s goal is to represent that number using binary, by toggling a set of buttons corresponding to each bit.  
+The player’s success is visually indicated by green LEDs, which light up when the corresponding bit is set to 1.
 The player must toggle 4 buttons, each representing a bit (0 or 1) in the binary number. The LED lights up when the corresponding bit is 1.
 
 ## Setup
@@ -28,8 +28,9 @@ There are different ways to run the game:
 1. Choose the difficulty by turning the potentiometer. The game offers four difficulty levels: Easy, Medium, Hard, and Expert, which affect the time limit for your response.
 2. Press the leftmost button to start the game.
 3. Input your binary answer by pressing the buttons. Each button corresponds to a specific bit (0 or 1). For example:
-   - Button 1 (leftmost) represents the least significant bit (LSB).
-   - Button 4 (rightmost) represents the most significant bit (MSB).
-4. The LEDs will indicate if you set a bit to 1. Correct answers will be acknowledged, and you can move to the next round. Incorrect or slow answers will end the game.
+   - Button 1 (leftmost) represents the least significant bit.
+   - Button 4 (rightmost) represents the most significant bit.
+4. The LEDs will indicate if you set a bit to 1. Correct answers will be acknowledged, and you can move to the next round. If the answer was not provided in time the game is over.
+5. You will see your score and if it is greater then previus, arduino will show it in the main menu!
 
 
