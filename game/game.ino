@@ -15,7 +15,7 @@ const int REDLED = 13;
 
 int highScore = 0;
 int currentScore = 0;
-int difficulty = 0;
+int difficultyFactor = 0;
 int timeLimit = 15;
 
 bool ledStates[] = {LOW, LOW, LOW, LOW};
@@ -34,8 +34,6 @@ unsigned long timeRoundStart = 0;
 int targetNumber = 0;
 int currentPotValue = 1;
 int currentDelta = 0;
-
-int F = 0;
 
 void wakeUp(){}
 
@@ -75,51 +73,54 @@ void displayIntro() {
 }
 
 void selectDifficulty() {
+  checkForIdleTimeout();
+  updateDifficultyLevel();
+  checkButtonPressForSelection();
+  blinkRedLed();
+}
+
+void checkForIdleTimeout() {
   if (millis() - lastActivityTime >= WAKE_UP_TIME) goToSleepMode();
+}
+
+void updateDifficultyLevel() {
   int newPotValue = analogRead(A1);
   if(newPotValue != currentPotValue){
     currentPotValue = newPotValue;
-    if(currentPotValue >= 0 && currentPotValue <= 256 && difficulty != 1){
-      lastActivityTime = millis();
-      lcd.setCursor(0,2);
+    lastActivityTime = millis();
+    lcd.setCursor(0,2);
+
+    if(currentPotValue <= 256 && difficultyFactor != 1){
       lcd.print("          ");
       lcd.setCursor(0,2);
       lcd.print(" :) EASY");
-      difficulty = 1;
-      F = 10;
-    }else if(currentPotValue > 256 && currentPotValue <= 512 && difficulty != 2){
-      lastActivityTime = millis();
-      lcd.setCursor(0,2);
+      difficultyFactor = 1;
+    } else if(currentPotValue > 256 && currentPotValue <= 512 && difficultyFactor != 2){
       lcd.print("          ");
       lcd.setCursor(0,2);
       lcd.print(" :| MEDIUM");
-      difficulty = 2;
-      F = 15;
-    }else if(currentPotValue > 512 && currentPotValue <= 768 && difficulty != 3){
-      lastActivityTime = millis();
-      lcd.setCursor(0,2);
+      difficultyFactor = 2;
+    } else if(currentPotValue > 512 && currentPotValue <= 768 && difficultyFactor != 3){
       lcd.print("          ");
       lcd.setCursor(0,2);
       lcd.print(">:) HARD");
-      difficulty = 3;
-      F = 27;
-    }else if(currentPotValue > 768 && difficulty != 4){
-      lastActivityTime = millis();
-      lcd.setCursor(0,2);
+      difficultyFactor = 3;
+    }else if(currentPotValue > 768 && difficultyFactor != 4){
       lcd.print("          ");
       lcd.setCursor(0,2);
       lcd.print(">:D EXPERT");
-      difficulty = 4;
-      F = 50;
+      difficultyFactor = 4;
     }
   }
-  if (digitalRead(BUTTONS[3])) {
+}
+
+void checkButtonPressForSelection() {
+    if (digitalRead(BUTTONS[3])) {
     isDifficultySelected = true;
     redLedState = LOW;
     digitalWrite(REDLED, redLedState);
     lastActivityTime = millis();
   }
-  blinkRedLed();
 }
 
 void goToSleepMode() {
@@ -161,14 +162,15 @@ void playGame() {
     timeRoundStart = millis();
   } 
   else {
-    no_more_time();
+    handleRoundTimer();
     handleButtonPresses();
     if (targetNumber == convertButtonsStatesToDecimal()) {
       currentScore++;
       displayScore();
       resetRound();
       
-      timeLimit = timeLimit - (timeLimit * F / 100);
+      timeLimit = timeLimit - difficultyFactor;
+      if (timeLimit < 1) timeLimit = 1;
       currentDelta = 0;
     }
   }
@@ -237,7 +239,7 @@ void resetGame() {
   isGameStarted = false;
   isGameOver = false;
   currentScore = 0;
-  difficulty = 0;
+  difficultyFactor = 0;
   currentPotValue = 0;
   shouldDisplayNumber = true;
   timeLimit = 15;
@@ -248,7 +250,7 @@ void resetGame() {
   currentDelta = 0;
 }
 
-void no_more_time(){
+void handleRoundTimer(){
 int timeElapsed = (millis() - timeRoundStart) / 1000 ;
  if(currentDelta != timeElapsed){
     lcd.setCursor(8,0);
@@ -256,7 +258,7 @@ int timeElapsed = (millis() - timeRoundStart) / 1000 ;
     lcd.setCursor(13,0);
     lcd.print("  ");
     lcd.setCursor(13,0);
-    lcd.print(timeLimit - currentDelta);
+    lcd.print(timeLimit - timeElapsed + 1);
   }
   currentDelta = timeElapsed;
   if(currentDelta > timeLimit) isGameOver = true;
